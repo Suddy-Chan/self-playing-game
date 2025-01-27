@@ -62,7 +62,7 @@ class Character:
         self.y = y
         self.target_x = x
         self.target_y = y
-        self.speed = 3
+        self.base_speed = 3  # Rename speed to base_speed
         self.size = 20
         self.color = (255, 0, 0)
         
@@ -93,6 +93,13 @@ class Character:
             'farmer': random.uniform(0.8, 1.2)     # Affects farming preference
         }
 
+    def get_current_speed(self):
+        # Calculate speed multiplier based on HP percentage
+        hp_percentage = self.hp / self.max_hp
+        # Speed ranges from 50% to 150% of base speed depending on HP
+        speed_multiplier = 0.5 + hp_percentage
+        return self.base_speed * speed_multiplier
+
     def move_to_target(self):
         if not self.current_target:
             return True
@@ -101,9 +108,11 @@ class Character:
         dy = self.current_target[1] - self.y
         distance = math.sqrt(dx**2 + dy**2)
         
-        if distance > self.speed:
-            self.x += (dx/distance) * self.speed
-            self.y += (dy/distance) * self.speed
+        current_speed = self.get_current_speed()  # Get speed based on HP
+        
+        if distance > current_speed:
+            self.x += (dx/distance) * current_speed
+            self.y += (dy/distance) * current_speed
             return False
         else:
             self.x = self.current_target[0]
@@ -211,8 +220,9 @@ class World:
         }
         self.characters = []
         self.width = 800
-        self.height = 700  # Increased to maintain game area size
-        self.game_area_start = 100  # Where the game area begins
+        self.height = 700
+        self.ui_height = 160  # Total height of all UI panels
+        self.game_area_start = self.ui_height  # Game starts below UI
         self.tree_positions = []
         self.food_positions = []
         self.house_positions = []
@@ -225,14 +235,13 @@ class World:
         self.generate_resources()
         self.ui_font = pygame.font.Font(None, 24)
         self.title_font = pygame.font.Font(None, 36)
-        self.ui_height = 100  # Height of the top UI panel
 
     def add_character(self, character):
         self.characters.append(character)
 
     def generate_resources(self):
         margin = 50
-        # Generate resources only in the game area
+        # Generate resources only below UI area
         for _ in range(self.max_trees):
             x = random.randint(margin, self.width - margin)
             y = random.randint(self.game_area_start + margin, self.height - margin)
@@ -358,15 +367,20 @@ class World:
         return reward
 
     def draw(self, screen):
-        # Draw background
-        screen.fill((50, 100, 50))  # Dark green background
+        # Draw game background only in game area
+        pygame.draw.rect(screen, (50, 100, 50), 
+                        (0, self.game_area_start, self.width, self.height - self.game_area_start))
         
-        # Draw grid lines
+        # Draw grid lines only in game area
         grid_spacing = 50
         for x in range(0, self.width, grid_spacing):
-            pygame.draw.line(screen, (60, 110, 60), (x, 0), (x, self.height))
-        for y in range(0, self.height, grid_spacing):
-            pygame.draw.line(screen, (60, 110, 60), (0, y), (self.width, y))
+            pygame.draw.line(screen, (60, 110, 60), 
+                           (x, self.game_area_start), 
+                           (x, self.height))
+        for y in range(self.game_area_start, self.height, grid_spacing):
+            pygame.draw.line(screen, (60, 110, 60), 
+                           (0, y), 
+                           (self.width, y))
         
         # Draw resources and entities
         for x, y in self.tree_positions:
@@ -388,7 +402,7 @@ class World:
             animation.update()
             animation.draw(screen)
             
-        # Draw UI last
+        # Draw UI last (on top)
         self.draw_ui(screen)
 
     def draw_tree(self, screen, x, y):
@@ -425,28 +439,61 @@ class World:
                                (x - 10 + i*10, y - 15 + j*10), 2)
 
     def draw_ui(self, screen):
-        # Draw UI background
+        # Draw main UI background
         ui_surface = pygame.Surface((self.width, self.ui_height))
         ui_surface.fill((40, 40, 40))
         screen.blit(ui_surface, (0, 0))
         
+        # Draw instruction panel with different background color
+        instruction_height = 45  # Increased height for better spacing
+        instruction_surface = pygame.Surface((self.width, instruction_height))
+        instruction_surface.fill((60, 60, 80))  # Slightly bluish dark gray
+        screen.blit(instruction_surface, (0, 0))
+        
+        # Draw instructions in two lines with more spacing
+        instructions1 = "Controls: Move mouse to desired location, then:"
+        instructions2 = "Press 1 to plant tree | Press 2 to plant food"
+        
+        # Left-aligned instructions with padding, now in white (255, 255, 255)
+        instruction_text1 = self.ui_font.render(instructions1, True, (255, 255, 255))
+        instruction_text2 = self.ui_font.render(instructions2, True, (255, 255, 255))
+        padding = 20
+        screen.blit(instruction_text1, (padding, 8))
+        screen.blit(instruction_text2, (padding, 28))
+        
+        # Draw world stats panel background
+        stats_y = instruction_height
+        stats_height = 35
+        stats_surface = pygame.Surface((self.width, stats_height))
+        stats_surface.fill((50, 50, 50))  # Gray for world stats
+        screen.blit(stats_surface, (0, stats_y))
+        
         # Draw world stats
+        stats_padding = 20
         world_stats = [
             f"Trees: {self.resources[Resource.WOOD]}",
             f"Food: {self.resources[Resource.FOOD]}",
             f"Next Resource: {(self.resource_regen_interval - self.resource_regen_timer) // 60}s"
         ]
         
-        x_pos = 10
+        x_pos = stats_padding
+        stats_text_y = stats_y + 10
         for text in world_stats:
             text_surface = self.ui_font.render(text, True, (255, 255, 255))
-            screen.blit(text_surface, (x_pos, 10))
+            screen.blit(text_surface, (x_pos, stats_text_y))
             x_pos += 150
-            
-        # Draw character stats in columns
-        char_start_y = 40
+        
+        # Draw character stats panel background
+        char_stats_y = stats_y + stats_height
+        char_stats_height = 80  # Increased fixed height to cover all text
+        char_stats_surface = pygame.Surface((self.width, char_stats_height))
+        char_stats_surface.fill((45, 45, 55))  # Slightly bluish gray for character stats
+        screen.blit(char_stats_surface, (0, char_stats_y))
+        
+        # Draw character stats in columns with proper spacing
+        char_start_y = char_stats_y + 10
         for idx, char in enumerate(self.characters):
-            x_pos = 10 + (idx * 260)  # Space characters horizontally
+            x_pos = stats_padding + (idx * 260)
             
             # Draw character name and stats
             name_text = self.title_font.render(char.name, True, (255, 255, 0))
@@ -463,13 +510,13 @@ class World:
 
 def main():
     pygame.init()
-    screen = pygame.display.set_mode((800, 700))  # Adjusted height
+    screen = pygame.display.set_mode((800, 700))
     pygame.display.set_caption("AI Village Simulation")
     clock = pygame.time.Clock()
     
     world = World()
     
-    # Create three characters with different starting positions
+    # Create three characters with positions below UI
     characters = [
         Character("Bob", 200, 400),
         Character("Alice", 400, 400),
@@ -491,6 +538,22 @@ def main():
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
                 running = False
+            elif event.type == pygame.KEYDOWN:
+                # Get mouse position when key is pressed
+                mouse_x, mouse_y = pygame.mouse.get_pos()
+                
+                # Only spawn if mouse is in game area
+                if mouse_y > world.game_area_start:
+                    if event.key == pygame.K_1:  # Press 1 to spawn tree
+                        world.tree_positions.append((mouse_x, mouse_y))
+                        world.resources[Resource.WOOD] += 1
+                        world.animations.append(
+                            Animation("🌱 Tree Planted!", mouse_x, mouse_y, (0, 255, 0)))
+                    elif event.key == pygame.K_2:  # Press 2 to spawn food
+                        world.food_positions.append((mouse_x, mouse_y))
+                        world.resources[Resource.FOOD] += 1
+                        world.animations.append(
+                            Animation("🌾 Food Planted!", mouse_x, mouse_y, (255, 255, 0)))
         
         # Update all characters
         for character in characters:
