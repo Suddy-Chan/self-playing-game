@@ -212,6 +212,24 @@ class Character:
                         (self.x - bar_width/2, start_y, 
                          bar_width * hp_percentage, bar_height))
 
+class House:
+    def __init__(self, x, y):
+        self.x = x
+        self.y = y
+        self.level = 1
+        self.max_level = 3
+        # Resources needed for each upgrade
+        self.upgrade_costs = {
+            2: {"wood": 8},  # Level 1 -> 2
+            3: {"wood": 15}  # Level 2 -> 3
+        }
+        # Benefits for each level
+        self.level_benefits = {
+            1: {"hp_regen": 0.05},
+            2: {"hp_regen": 0.1},
+            3: {"hp_regen": 0.2}
+        }
+
 class World:
     def __init__(self):
         self.resources = {
@@ -225,7 +243,7 @@ class World:
         self.game_area_start = self.ui_height  # Game starts below UI
         self.tree_positions = []
         self.food_positions = []
-        self.house_positions = []
+        self.houses = []  # Replace house_positions with House objects
         self.farm_positions = []
         self.animations = []
         self.max_trees = 20
@@ -265,7 +283,7 @@ class World:
                 self.tree_positions.append((x, y))
                 self.resources[Resource.WOOD] += 1
                 self.animations.append(
-                    Animation("🌱 New Tree", x, y, (0, 255, 0)))
+                    Animation("New Tree", x, y, (0, 255, 0)))
             
             # Regenerate food
             if len(self.food_positions) < self.max_food and self.resources[Resource.FOOD] < 50:
@@ -275,7 +293,7 @@ class World:
                 self.food_positions.append((x, y))
                 self.resources[Resource.FOOD] += 1
                 self.animations.append(
-                    Animation("🌾 New Food", x, y, (255, 255, 0)))
+                    Animation("New Food", x, y, (255, 255, 0)))
 
     def find_nearest_resource(self, character, resource_positions):
         if not resource_positions:
@@ -351,10 +369,26 @@ class World:
         elif action == Action.BUILD_HOUSE:
             if character.inventory[Resource.WOOD] >= 5:
                 character.inventory[Resource.WOOD] -= 5
-                character.inventory[Resource.HOUSE] += 1
-                self.house_positions.append((character.x, character.y))
+                # Create new house
+                new_house = House(character.x, character.y)
+                self.houses.append(new_house)
                 reward = 10
                 
+                # Add upgrade house action if near an existing house
+                nearby_house = self.find_nearby_house(character)
+                if nearby_house and nearby_house.level < nearby_house.max_level:
+                    upgrade_cost = nearby_house.upgrade_costs[nearby_house.level + 1]["wood"]
+                    if character.inventory[Resource.WOOD] >= upgrade_cost:
+                        character.inventory[Resource.WOOD] -= upgrade_cost
+                        nearby_house.level += 1
+                        reward += 15  # Additional reward for upgrading
+                        self.animations.append(
+                            Animation(f"House Upgraded to Lv{nearby_house.level}!", 
+                                    nearby_house.x, nearby_house.y, 
+                                    (255, 215, 0)))  # Gold color for upgrade
+            else:
+                reward = -1
+
         elif action == Action.FARM_FOOD:
             if character.inventory[Resource.FOOD] >= 1:
                 character.current_target = (character.x, character.y)  # Farm at current position
@@ -365,6 +399,24 @@ class World:
 
         character.learn(action, reward)
         return reward
+
+    def find_nearby_house(self, character):
+        for house in self.houses:
+            dx = house.x - character.x
+            dy = house.y - character.y
+            distance = math.sqrt(dx**2 + dy**2)
+            if distance < 50:  # Within 50 pixels
+                return house
+        return None
+
+    def update_characters(self):
+        for character in self.characters:
+            # Apply house benefits based on proximity
+            nearby_house = self.find_nearby_house(character)
+            if nearby_house:
+                hp_regen = nearby_house.level_benefits[nearby_house.level]["hp_regen"]
+                character.hp = min(character.max_hp, 
+                                 character.hp + hp_regen)
 
     def draw(self, screen):
         # Draw game background only in game area
@@ -387,8 +439,8 @@ class World:
             self.draw_tree(screen, x, y)
         for x, y in self.food_positions:
             self.draw_food(screen, x, y)
-        for x, y in self.house_positions:
-            self.draw_house(screen, x, y)
+        for house in self.houses:
+            self.draw_house(screen, house)
         for x, y in self.farm_positions:
             self.draw_farm(screen, x, y)
             
@@ -418,12 +470,35 @@ class World:
         pygame.draw.circle(screen, (255, 215, 0), (x, y), 8)
         pygame.draw.circle(screen, (218, 165, 32), (x, y), 6)
 
-    def draw_house(self, screen, x, y):
-        # Draw house body
-        pygame.draw.rect(screen, (139, 69, 19), (x - 15, y - 15, 30, 30))
-        # Draw roof
-        pygame.draw.polygon(screen, (165, 42, 42), 
-                          [(x - 20, y - 15), (x + 20, y - 15), (x, y - 35)])
+    def draw_house(self, screen, house):
+        base_size = 30  # Base size for level 1
+        size_increase = 10  # Size increase per level
+        current_size = base_size + (house.level - 1) * size_increase
+        
+        # Draw house body (gets bigger with level)
+        house_color = {
+            1: (139, 69, 19),   # Brown
+            2: (160, 82, 45),   # Sienna
+            3: (178, 34, 34)    # Firebrick
+        }[house.level]
+        
+        pygame.draw.rect(screen, house_color, 
+                        (house.x - current_size/2, 
+                         house.y - current_size/2, 
+                         current_size, current_size))
+        
+        # Draw roof (gets taller with level)
+        roof_height = 20 + (house.level - 1) * 5
+        pygame.draw.polygon(screen, (165, 42, 42),
+                          [(house.x - current_size/2 - 5, house.y - current_size/2),
+                           (house.x + current_size/2 + 5, house.y - current_size/2),
+                           (house.x, house.y - current_size/2 - roof_height)])
+        
+        # Draw level indicator
+        font = pygame.font.Font(None, 20)
+        level_text = font.render(f"Lv{house.level}", True, (255, 255, 255))
+        screen.blit(level_text, (house.x - level_text.get_width()/2, 
+                                house.y + current_size/2 + 5))
 
     def draw_farm(self, screen, x, y):
         farm_color = (205, 133, 63)
@@ -508,25 +583,78 @@ class World:
                 text_surface = self.ui_font.render(text, True, (255, 255, 255))
                 screen.blit(text_surface, (x_pos, char_start_y + 25 + i * 20))
 
+def draw_instruction_screen(screen):
+    # Fill screen with semi-transparent black
+    overlay = pygame.Surface((800, 700))
+    overlay.fill((0, 0, 0))
+    overlay.set_alpha(230)
+    screen.blit(overlay, (0, 0))
+    
+    # Create fonts with smaller size
+    title_font = pygame.font.Font(None, 48)
+    text_font = pygame.font.Font(None, 28)  # Reduced from 32 to 28
+    
+    # Title
+    title = title_font.render("Welcome to AI Village Simulation!", True, (255, 255, 255))
+    screen.blit(title, (400 - title.get_width()//2, 100))  # Moved up from 150 to 100
+    
+    # Instructions
+    instructions = [
+        "In this simulation, three AI characters (Alice, Bob, and Charlie)",
+        "will autonomously perform various actions:",
+        "",
+        "• Chop trees for wood",
+        "• Harvest and farm food to survive",
+        "• Build and upgrade houses",
+        "",
+        "Characters will make decisions based on their needs and personality traits.",
+        "Their speed depends on their health, which decreases over time.",
+        "",
+        "You can help by planting resources:",
+        "• Press 1 to plant a tree",
+        "• Press 2 to plant food"
+    ]
+    
+    y = 180  # Start text higher (changed from 250)
+    line_spacing = 30  # Reduced spacing (changed from 35)
+    for line in instructions:
+        text = text_font.render(line, True, (255, 255, 255))
+        screen.blit(text, (400 - text.get_width()//2, y))
+        y += line_spacing
+    
+    # Start button - moved lower
+    button_rect = pygame.Rect(300, 620, 200, 50)  # Moved from 600 to 620
+    pygame.draw.rect(screen, (0, 200, 0), button_rect)
+    pygame.draw.rect(screen, (0, 150, 0), button_rect, 3)
+    
+    button_text = text_font.render("Start Simulation", True, (255, 255, 255))
+    screen.blit(button_text, (400 - button_text.get_width()//2, 635))  # Adjusted y position
+    
+    return button_rect
+
 def main():
     pygame.init()
     screen = pygame.display.set_mode((800, 700))
     pygame.display.set_caption("AI Village Simulation")
     clock = pygame.time.Clock()
     
+    # Add instruction screen state
+    show_instructions = True
+    start_button = None
+    
     world = World()
     
-    # Create three characters with positions below UI
+    # Create three characters with positions below UI, in alphabetical order
     characters = [
-        Character("Bob", 200, 400),
-        Character("Alice", 400, 400),
+        Character("Alice", 200, 400),
+        Character("Bob", 400, 400),
         Character("Charlie", 600, 400)
     ]
     
     # Give each character different colors
-    characters[0].color = (255, 100, 100)  # Red
-    characters[1].color = (100, 255, 100)  # Green
-    characters[2].color = (100, 100, 255)  # Blue
+    characters[0].color = (100, 255, 100)  # Green for Alice
+    characters[1].color = (255, 100, 100)  # Red for Bob
+    characters[2].color = (100, 100, 255)  # Blue for Charlie
     
     for character in characters:
         world.add_character(character)
@@ -538,48 +666,59 @@ def main():
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
                 running = False
-            elif event.type == pygame.KEYDOWN:
-                # Get mouse position when key is pressed
+            elif event.type == pygame.MOUSEBUTTONDOWN and show_instructions:
+                # Check if start button was clicked
+                if start_button and start_button.collidepoint(event.pos):
+                    show_instructions = False
+            elif not show_instructions and event.type == pygame.KEYDOWN:
+                # Only allow key inputs when instruction screen is gone
                 mouse_x, mouse_y = pygame.mouse.get_pos()
                 
-                # Only spawn if mouse is in game area
                 if mouse_y > world.game_area_start:
-                    if event.key == pygame.K_1:  # Press 1 to spawn tree
+                    if event.key == pygame.K_1:
                         world.tree_positions.append((mouse_x, mouse_y))
                         world.resources[Resource.WOOD] += 1
                         world.animations.append(
-                            Animation("🌱 Tree Planted!", mouse_x, mouse_y, (0, 255, 0)))
-                    elif event.key == pygame.K_2:  # Press 2 to spawn food
+                            Animation("Tree Planted!", mouse_x, mouse_y, (0, 255, 0)))
+                    elif event.key == pygame.K_2:
                         world.food_positions.append((mouse_x, mouse_y))
                         world.resources[Resource.FOOD] += 1
                         world.animations.append(
-                            Animation("🌾 Food Planted!", mouse_x, mouse_y, (255, 255, 0)))
+                            Animation("Food Planted!", mouse_x, mouse_y, (255, 255, 0)))
         
-        # Update all characters
-        for character in characters:
-            character.update_needs()
-        
-        world.regenerate_resources()
-        
-        # Update each character's actions
-        if frame_count % 60 == 0:
-            for character in characters:
-                if character.action_state == "idle":
-                    action = character.choose_action()
-                    reward = world.perform_action(character, action)
-                    print(f"{character.name} performed {action.value}, got reward: {reward}")
+        if show_instructions:
+            # Draw the game world in background
+            screen.fill((50, 100, 50))
+            world.draw(screen)
+            # Draw instructions and get button rect
+            start_button = draw_instruction_screen(screen)
         else:
+            # Normal game update logic
             for character in characters:
-                if character.current_action:
-                    world.perform_action(character, character.current_action)
-        
-        # Clear screen and draw
-        screen.fill((50, 100, 50))
-        world.draw(screen)
+                character.update_needs()
+            
+            world.regenerate_resources()
+            
+            if frame_count % 60 == 0:
+                for character in characters:
+                    if character.action_state == "idle":
+                        action = character.choose_action()
+                        reward = world.perform_action(character, action)
+                        print(f"{character.name} performed {action.value}, got reward: {reward}")
+            else:
+                for character in characters:
+                    if character.current_action:
+                        world.perform_action(character, character.current_action)
+            
+            world.update_characters()
+            
+            screen.fill((50, 100, 50))
+            world.draw(screen)
+            
+            frame_count += 1
         
         pygame.display.flip()
         clock.tick(60)
-        frame_count += 1
     
     pygame.quit()
 

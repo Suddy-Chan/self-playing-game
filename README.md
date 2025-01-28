@@ -1,6 +1,6 @@
 # AI Village Simulation
 
-A game where AI characters learn to play themselves based on reinforcement learning. Watch as Bob, Alice, and Charlie learn to survive by gathering resources, building houses, and farming food.
+A game where AI characters learn to play themselves based on reinforcement learning. Watch as Alice, Bob, and Charlie learn to survive by gathering resources, building houses, and farming food.
 
 ## Game Overview
 
@@ -16,14 +16,14 @@ In this simulation, three AI characters with different personalities interact wi
 As a player, you can help the AI characters by adding resources to the environment:
 1. Move your mouse to the desired location in the game area
 2. Press keys:
-   - `1`: Plant a tree 🌱
-   - `2`: Plant food 🌾
+   - `1`: Plant a tree
+   - `2`: Plant food
 
 ## Characters
 
 The simulation features three characters with distinct colors:
-- Bob (Red)
 - Alice (Green)
+- Bob (Red)
 - Charlie (Blue)
 
 Each character has:
@@ -64,3 +64,18 @@ Characters use Q-learning to:
 - Adapt their behavior based on needs
 - Balance exploration and exploitation
 - Consider their personality traits when making decisions
+
+## Building System
+
+Houses can be upgraded up to level 3:
+- Level 1: Basic house (Costs 5 wood)
+  - Provides basic HP regeneration (0.05 HP/tick)
+- Level 2: Improved house (Costs 8 wood)
+  - Increased HP regeneration (0.1 HP/tick)
+  - Larger size
+- Level 3: Advanced house (Costs 15 wood)
+  - Maximum HP regeneration (0.2 HP/tick)
+  - Largest size
+  - Premium appearance
+
+Characters will automatically upgrade nearby houses if they have enough resources.
