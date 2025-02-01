@@ -6,6 +6,7 @@ A game where AI characters learn to play themselves based on reinforcement learn
 
 In this simulation, three AI characters with different personalities interact with their environment to survive. Each character:
 - Has a health (HP) system that slowly decays over time
+- Dies permanently when HP reaches 0
 - Moves faster when healthy and slower when injured
 - Can gather resources, build houses, and farm food
 - Learns from their actions through a Q-learning system
