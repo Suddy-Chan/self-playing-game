@@ -25,6 +25,8 @@ class World:
         self.max_food = 10
         self.resource_regen_timer = 0
         self.resource_regen_interval = 300
+        self.game_speed = 1  # Default speed multiplier
+        self.max_speed = 5  # Maximum speed multiplier
         self.generate_resources()
         self.ui_font = pygame.font.Font(None, 24)
         self.title_font = pygame.font.Font(None, 36)
@@ -308,15 +310,17 @@ class World:
         world_stats = [
             f"Trees: {self.resources[Resource.WOOD]}",
             f"Food: {self.resources[Resource.FOOD]}",
-            f"Next Resource: {(self.resource_regen_interval - self.resource_regen_timer) // 60}s"
+            f"Next Resource: {(self.resource_regen_interval - self.resource_regen_timer) // 60}s",
+            f"Speed: {self.game_speed}x"
         ]
         
         x_pos = stats_padding
         stats_text_y = stats_y + 10
-        for text in world_stats:
+        for i, text in enumerate(world_stats):
             text_surface = self.ui_font.render(text, True, (255, 255, 255))
             screen.blit(text_surface, (x_pos, stats_text_y))
-            x_pos += 150
+            # Add extra spacing before the speed text
+            x_pos += 200 if i == 2 else 150
         
         # Draw character stats panel
         char_stats_y = stats_y + stats_height

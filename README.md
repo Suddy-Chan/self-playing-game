@@ -19,6 +19,7 @@ As a player, you can help the AI characters by adding resources to the environme
 2. Press keys:
    - `1`: Plant a tree
    - `2`: Plant food
+   - `SPACE`: Toggle game speed (1x to 5x)
 
 ## Characters
 
