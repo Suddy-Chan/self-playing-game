@@ -25,11 +25,19 @@ class World:
         self.max_food = 10
         self.resource_regen_timer = 0
         self.resource_regen_interval = 300
-        self.game_speed = 1  # Default speed multiplier
-        self.max_speed = 5  # Maximum speed multiplier
+        self.game_speed = 1
+        self.max_speed = 5
         self.generate_resources()
         self.ui_font = pygame.font.Font(None, 24)
         self.title_font = pygame.font.Font(None, 36)
+        # Rearrange speed control positions
+        button_width = 20
+        button_height = 20
+        button_y = 55
+        self.speed_label_pos = (500, button_y)
+        self.decrease_button = pygame.Rect(560, button_y, button_width, button_height)
+        self.speed_value_pos = (590, button_y)
+        self.increase_button = pygame.Rect(630, button_y, button_width, button_height)
 
     def add_character(self, character):
         self.characters.append(character)
@@ -310,8 +318,7 @@ class World:
         world_stats = [
             f"Trees: {self.resources[Resource.WOOD]}",
             f"Food: {self.resources[Resource.FOOD]}",
-            f"Next Resource: {(self.resource_regen_interval - self.resource_regen_timer) // 60}s",
-            f"Speed: {self.game_speed}x"
+            f"Next Resource: {(self.resource_regen_interval - self.resource_regen_timer) // 60}s"
         ]
         
         x_pos = stats_padding
@@ -343,4 +350,32 @@ class World:
             
             for i, text in enumerate(stats_text):
                 text_surface = self.ui_font.render(text, True, (255, 255, 255))
-                screen.blit(text_surface, (x_pos, char_start_y + 25 + i * 20)) 
+                screen.blit(text_surface, (x_pos, char_start_y + 25 + i * 20))
+        
+        # Draw speed controls in new order
+        # Draw "Speed:" label
+        speed_label = self.ui_font.render("Speed:", True, (255, 255, 255))
+        screen.blit(speed_label, self.speed_label_pos)
+        
+        # Draw decrease button (-)
+        pygame.draw.rect(screen, (100, 100, 100), self.decrease_button)
+        pygame.draw.rect(screen, (200, 200, 200), self.decrease_button, 2)
+        minus_text = self.ui_font.render("-", True, (255, 255, 255))
+        screen.blit(minus_text, (self.decrease_button.centerx - 4, self.decrease_button.centery - 8))
+        
+        # Draw speed value
+        speed_value = self.ui_font.render(f"{self.game_speed}x", True, (255, 255, 255))
+        screen.blit(speed_value, self.speed_value_pos)
+        
+        # Draw increase button (+)
+        pygame.draw.rect(screen, (100, 100, 100), self.increase_button)
+        pygame.draw.rect(screen, (200, 200, 200), self.increase_button, 2)
+        plus_text = self.ui_font.render("+", True, (255, 255, 255))
+        screen.blit(plus_text, (self.increase_button.centerx - 4, self.increase_button.centery - 8))
+
+    def handle_mouse_event(self, event):
+        if event.type == pygame.MOUSEBUTTONDOWN:
+            if self.decrease_button.collidepoint(event.pos):
+                self.game_speed = max(1, self.game_speed - 1)
+            elif self.increase_button.collidepoint(event.pos):
+                self.game_speed = min(self.max_speed, self.game_speed + 1) 

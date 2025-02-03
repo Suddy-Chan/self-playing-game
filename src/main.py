@@ -30,7 +30,7 @@ def draw_instruction_screen(screen):
         "You can help by planting resources:",
         "• Press 1 to plant a tree",
         "• Press 2 to plant food",
-        "• Press SPACE to change game speed"
+        "• Use +/- buttons at the top to control simulation speed"
     ]
     
     y = 180
@@ -80,28 +80,30 @@ def main():
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
                 running = False
-            elif event.type == pygame.MOUSEBUTTONDOWN and show_instructions:
-                if start_button and start_button.collidepoint(event.pos):
-                    show_instructions = False
-            elif not show_instructions and event.type == pygame.KEYDOWN:
-                if event.key == pygame.K_SPACE:
-                    world.game_speed = (world.game_speed % world.max_speed) + 1
-                    world.animations.append(
-                        Animation(f"Game Speed: {world.game_speed}x", 
-                                 world.width//2, world.height//2, (255, 255, 0)))
+            elif event.type == pygame.MOUSEBUTTONDOWN:
+                if show_instructions:
+                    # Check if start button is clicked
+                    mouse_pos = pygame.mouse.get_pos()
+                    if start_button.collidepoint(mouse_pos):
+                        show_instructions = False
                 else:
-                    mouse_x, mouse_y = pygame.mouse.get_pos()
-                    if mouse_y > world.game_area_start:
-                        if event.key == pygame.K_1:
-                            world.tree_positions.append((mouse_x, mouse_y))
-                            world.resources[Resource.WOOD] += 1
-                            world.animations.append(
-                                Animation("Tree Planted!", mouse_x, mouse_y, (0, 255, 0)))
-                        elif event.key == pygame.K_2:
-                            world.food_positions.append((mouse_x, mouse_y))
-                            world.resources[Resource.FOOD] += 1
-                            world.animations.append(
-                                Animation("Food Planted!", mouse_x, mouse_y, (255, 255, 0)))
+                    world.handle_mouse_event(event)
+            elif event.type in (pygame.MOUSEBUTTONUP, pygame.MOUSEMOTION):
+                if not show_instructions:
+                    world.handle_mouse_event(event)
+            elif not show_instructions and event.type == pygame.KEYDOWN:
+                mouse_x, mouse_y = pygame.mouse.get_pos()
+                if mouse_y > world.game_area_start:
+                    if event.key == pygame.K_1:
+                        world.tree_positions.append((mouse_x, mouse_y))
+                        world.resources[Resource.WOOD] += 1
+                        world.animations.append(
+                            Animation("Tree Planted!", mouse_x, mouse_y, (0, 255, 0)))
+                    elif event.key == pygame.K_2:
+                        world.food_positions.append((mouse_x, mouse_y))
+                        world.resources[Resource.FOOD] += 1
+                        world.animations.append(
+                            Animation("Food Planted!", mouse_x, mouse_y, (255, 255, 0)))
         
         if show_instructions:
             screen.fill((50, 100, 50))
@@ -136,7 +138,11 @@ def main():
             frame_count += 1
         
         pygame.display.flip()
-        # Use a fixed frame rate regardless of game speed
+        # Use game speed to control frame rate directly
         clock.tick(60 * world.game_speed)
+        
+        # Reset clock if speed changes
+        if event.type == pygame.KEYDOWN and event.key == pygame.K_SPACE:
+            clock = pygame.time.Clock()  # Reinitialize the clock when speed changes
     
     pygame.quit()
