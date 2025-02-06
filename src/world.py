@@ -27,6 +27,8 @@ class World:
         self.resource_regen_interval = 300
         self.game_speed = 1
         self.max_speed = 5
+        self.min_house_distance = 80
+        self.error_message_cooldown = 0
         self.generate_resources()
         self.ui_font = pygame.font.Font(None, 24)
         self.title_font = pygame.font.Font(None, 36)
@@ -90,6 +92,28 @@ class World:
         elif resource_type == "food":
             self.food_positions.remove(position)
 
+    def find_nearby_house(self, character, check_distance=None):
+        if check_distance is None:
+            check_distance = self.min_house_distance
+        
+        for house in self.houses:
+            dx = house.x - character.x
+            dy = house.y - character.y
+            distance = math.sqrt(dx**2 + dy**2)
+            if distance <= check_distance:
+                return house
+        return None
+
+    def can_build_house(self, x, y):
+        # Check if too close to other houses
+        for house in self.houses:
+            dx = house.x - x
+            dy = house.y - y
+            distance = math.sqrt(dx**2 + dy**2)
+            if distance < self.min_house_distance:
+                return False
+        return True
+
     def perform_action(self, character, action):
         reward = 0
         
@@ -131,9 +155,7 @@ class World:
                     character.current_target = target
                     character.action_state = "moving"
                 else:
-                    reward = -1
-            else:
-                reward = -2
+                    reward = -2
                 
         elif action == Action.HARVEST_FOOD:
             if self.food_positions:
@@ -142,28 +164,27 @@ class World:
                     character.current_target = target
                     character.action_state = "moving"
                 else:
-                    reward = -1
+                    reward = -2
             else:
                 reward = -2
                 
         elif action == Action.BUILD_HOUSE:
             if character.inventory[Resource.WOOD] >= 5:
-                character.inventory[Resource.WOOD] -= 5
-                new_house = House(character.x, character.y)
-                self.houses.append(new_house)
-                reward = 10
-                
-                nearby_house = self.find_nearby_house(character)
-                if nearby_house and nearby_house.level < nearby_house.max_level:
-                    upgrade_cost = nearby_house.upgrade_costs[nearby_house.level + 1]["wood"]
-                    if character.inventory[Resource.WOOD] >= upgrade_cost:
-                        character.inventory[Resource.WOOD] -= upgrade_cost
-                        nearby_house.level += 1
-                        reward += 15
+                # Check if location is valid before building
+                if self.can_build_house(character.x, character.y):
+                    character.inventory[Resource.WOOD] -= 5
+                    self.houses.append(House(character.x, character.y))
+                    character.inventory[Resource.HOUSE] += 1
+                    self.animations.append(
+                        Animation("House Built!", character.x, character.y, (0, 255, 0)))
+                    return 10
+                else:
+                    # Only show error message if cooldown is 0
+                    if self.error_message_cooldown <= 0:
                         self.animations.append(
-                            Animation(f"House Upgraded to Lv{nearby_house.level}!", 
-                                    nearby_house.x, nearby_house.y, 
-                                    (255, 215, 0)))
+                            Animation("Too close to other houses!", character.x, character.y, (255, 0, 0)))
+                        self.error_message_cooldown = 60  # Set cooldown (1 second at 60 FPS)
+                    return -1
             else:
                 reward = -1
 
@@ -178,16 +199,11 @@ class World:
         character.learn(action, reward)
         return reward
 
-    def find_nearby_house(self, character):
-        for house in self.houses:
-            dx = house.x - character.x
-            dy = house.y - character.y
-            distance = math.sqrt(dx**2 + dy**2)
-            if distance < 50:
-                return house
-        return None
-
     def update_characters(self):
+        # Update error message cooldown
+        if self.error_message_cooldown > 0:
+            self.error_message_cooldown -= 1
+        
         # Remove dead characters
         self.characters = [char for char in self.characters if not char.is_dead]
         
@@ -274,6 +290,39 @@ class World:
         level_text = font.render(f"Lv{house.level}", True, (255, 255, 255))
         screen.blit(level_text, (house.x - level_text.get_width()/2, 
                                 house.y + current_size/2 + 5))
+
+        # Add tooltip on hover
+        mouse_pos = pygame.mouse.get_pos()
+        house_rect = pygame.Rect(house.x - 20, house.y - 20, 40, 40)
+        
+        if house_rect.collidepoint(mouse_pos):
+            tooltip_lines = [
+                f"Level {house.level} House",
+                f"HP Recovery: {house.level_benefits[house.level]['hp_regen'] * 100}% per second"
+            ]
+            tooltip_font = pygame.font.Font(None, 20)
+            line_height = 20
+            
+            # Calculate tooltip dimensions
+            max_width = max(tooltip_font.size(line)[0] for line in tooltip_lines)
+            tooltip_width = max_width + 10
+            tooltip_height = (len(tooltip_lines) * line_height) + 10
+            
+            # Adjust position to keep tooltip on screen
+            tooltip_x = min(mouse_pos[0] + 10, self.width - tooltip_width - 10)
+            tooltip_y = min(mouse_pos[1] + 10, self.height - tooltip_height - 10)
+            
+            # Draw background for tooltip
+            tooltip_bg = pygame.Rect(tooltip_x, tooltip_y, tooltip_width, tooltip_height)
+            pygame.draw.rect(screen, (40, 40, 40), tooltip_bg)
+            pygame.draw.rect(screen, (100, 100, 100), tooltip_bg, 1)
+            
+            # Draw each line of text
+            for i, line in enumerate(tooltip_lines):
+                tooltip_surface = tooltip_font.render(line, True, (255, 255, 255))
+                screen.blit(tooltip_surface, 
+                           (tooltip_x + 5, 
+                            tooltip_y + 5 + (i * line_height)))
 
     def draw_farm(self, screen, x, y):
         farm_color = (205, 133, 63)
