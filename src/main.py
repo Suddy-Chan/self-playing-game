@@ -53,7 +53,6 @@ def main():
     pygame.init()
     screen = pygame.display.set_mode((800, 700))
     pygame.display.set_caption("AI Village Simulation")
-    clock = pygame.time.Clock()
     
     show_instructions = True
     start_button = None
@@ -75,6 +74,10 @@ def main():
     
     running = True
     frame_count = 0
+    
+    # Initialize base clock
+    clock = pygame.time.Clock()
+    base_fps = 60
     
     while running:
         for event in pygame.event.get():
@@ -110,39 +113,36 @@ def main():
             world.draw(screen)
             start_button = draw_instruction_screen(screen)
         else:
-            for character in characters[:]:  # Create a copy of the list to safely modify it
-                character.update_needs()
-                if character.is_dead:
-                    world.animations.append(
-                        Animation(f"{character.name} has died!", character.x, character.y, (255, 0, 0)))
-                    characters.remove(character)
-            
-            world.regenerate_resources()
-            
-            if frame_count % 60 == 0:
-                for character in characters:
-                    if character.action_state == "idle":
-                        action = character.choose_action()
-                        reward = world.perform_action(character, action)
-                        print(f"{character.name} performed {action.value}, got reward: {reward}")
-            else:
-                for character in characters:
-                    if character.current_action:
-                        world.perform_action(character, character.current_action)
-            
-            world.update_characters()
+            # Process multiple frames based on game speed
+            for _ in range(world.game_speed):
+                for character in characters[:]:
+                    character.update_needs()
+                    if character.is_dead:
+                        world.animations.append(
+                            Animation(f"{character.name} has died!", character.x, character.y, (255, 0, 0)))
+                        characters.remove(character)
+                
+                world.regenerate_resources()
+                
+                if frame_count % 60 == 0:
+                    for character in characters:
+                        if character.action_state == "idle":
+                            action = character.choose_action()
+                            reward = world.perform_action(character, action)
+                            print(f"{character.name} performed {action.value}, got reward: {reward}")
+                else:
+                    for character in characters:
+                        if character.current_action:
+                            world.perform_action(character, character.current_action)
+                
+                world.update_characters()
+                frame_count += 1
             
             screen.fill((50, 100, 50))
             world.draw(screen)
-            
-            frame_count += 1
         
         pygame.display.flip()
-        # Use game speed to control frame rate directly
-        clock.tick(60 * world.game_speed)
-        
-        # Reset clock if speed changes
-        if event.type == pygame.KEYDOWN and event.key == pygame.K_SPACE:
-            clock = pygame.time.Clock()  # Reinitialize the clock when speed changes
+        # Maintain consistent base frame rate
+        clock.tick(base_fps)
     
     pygame.quit()
