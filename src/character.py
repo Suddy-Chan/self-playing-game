@@ -156,10 +156,6 @@ class Character:
         font = pygame.font.Font(None, 20)
         name_text = font.render(self.name, True, (255, 255, 255))
         screen.blit(name_text, (self.x - name_text.get_width()/2, self.y - 65))
-        
-        if self.current_action:
-            action_text = font.render(self.current_action.value, True, (255, 255, 0))
-            screen.blit(action_text, (self.x - action_text.get_width()/2, self.y - 80))
 
     def draw_status_bars(self, screen):
         bar_width = 50

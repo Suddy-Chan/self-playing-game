@@ -334,6 +334,36 @@ class World:
                 pygame.draw.line(screen, crop_color,
                                (x - 10 + i*10, y - 10 + j*10),
                                (x - 10 + i*10, y - 15 + j*10), 2)
+        
+        # Add tooltip on hover
+        mouse_pos = pygame.mouse.get_pos()
+        farm_rect = pygame.Rect(x - 15, y - 15, 30, 30)
+        
+        if farm_rect.collidepoint(mouse_pos):
+            tooltip_lines = [
+                "Farm",
+                "Produces: 2 Food",
+                "Cost: 1 Food"
+            ]
+            tooltip_font = pygame.font.Font(None, 20)
+            line_height = 20
+            
+            max_width = max(tooltip_font.size(line)[0] for line in tooltip_lines)
+            tooltip_width = max_width + 10
+            tooltip_height = (len(tooltip_lines) * line_height) + 10
+            
+            tooltip_x = min(mouse_pos[0] + 10, self.width - tooltip_width - 10)
+            tooltip_y = min(mouse_pos[1] + 10, self.height - tooltip_height - 10)
+            
+            tooltip_bg = pygame.Rect(tooltip_x, tooltip_y, tooltip_width, tooltip_height)
+            pygame.draw.rect(screen, (40, 40, 40), tooltip_bg)
+            pygame.draw.rect(screen, (100, 100, 100), tooltip_bg, 1)
+            
+            for i, line in enumerate(tooltip_lines):
+                tooltip_surface = tooltip_font.render(line, True, (255, 255, 255))
+                screen.blit(tooltip_surface, 
+                           (tooltip_x + 5, 
+                            tooltip_y + 5 + (i * line_height)))
 
     def draw_ui(self, screen):
         # Draw main UI background
