@@ -2,6 +2,23 @@
 
 A game where AI characters learn to play themselves based on reinforcement learning. Watch as Alice, Bob, and Charlie learn to survive by gathering resources, building houses, and farming food.
 
+## How to Run
+
+1. Make sure you have Python 3.x installed on your system
+2. Install the required dependency:
+
+```bash
+pip install pygame
+```
+
+3. Clone this repository
+4. Navigate to the project directory
+5. Run the game:
+
+```bash
+python run.py
+```
+
 ## Game Overview
 
 In this simulation, three AI characters with different personalities interact with their environment to survive. Each character:
