@@ -64,6 +64,17 @@ class Character:
         # Add after other initializations
         self.is_dead = False
 
+        # Attack capabilities
+        self.attack_damage = 3
+        self.attack_range = 40
+        self.attack_cooldown = 45  # 0.75 seconds at 60 FPS
+        self.current_attack_cooldown = 0
+
+        # Level system
+        self.level = 1
+        self.exp = 0
+        self.exp_to_next_level = 5  # Initial exp needed (increases with each level)
+
     def get_current_speed(self):
         hp_percentage = self.hp / self.max_hp
         speed_multiplier = 0.5 + hp_percentage
@@ -167,4 +178,33 @@ class Character:
                         (self.x - bar_width/2, start_y, bar_width, bar_height))
         pygame.draw.rect(screen, (255, 0, 0), 
                         (self.x - bar_width/2, start_y, 
-                         bar_width * hp_percentage, bar_height)) 
+                         bar_width * hp_percentage, bar_height))
+
+    def can_attack(self):
+        return self.current_attack_cooldown <= 0
+
+    def update_attack_cooldown(self):
+        if self.current_attack_cooldown > 0:
+            self.current_attack_cooldown -= 1
+
+    def attack_monster(self, monster):
+        if self.can_attack():
+            monster.hp -= self.attack_damage
+            self.current_attack_cooldown = self.attack_cooldown
+            return True
+        return False
+
+    def gain_exp(self, amount):
+        self.exp += amount
+        while self.exp >= self.exp_to_next_level:
+            self.level_up()
+        
+    def level_up(self):
+        self.level += 1
+        self.exp -= self.exp_to_next_level
+        self.exp_to_next_level = self.level * 5  # Increase exp needed for next level
+        
+        # Improve stats with level up
+        self.max_hp += 10
+        self.hp = self.max_hp  # Heal to full on level up
+        self.attack_damage += 1 

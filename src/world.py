@@ -4,6 +4,7 @@ import pygame
 from .enums import Resource, Action
 from .animation import Animation
 from .buildings import House
+from .monster import Monster
 
 class World:
     def __init__(self):
@@ -29,6 +30,11 @@ class World:
         self.max_speed = 5
         self.min_house_distance = 80
         self.error_message_cooldown = 0
+        self.monsters = []
+        self.monster_spawn_timer = 0
+        self.monster_spawn_interval = 300  # 5 seconds at 60 FPS
+        self.max_monsters = 5
+        self.game_over = False
         self.generate_resources()
         self.ui_font = pygame.font.Font(None, 24)
         self.title_font = pygame.font.Font(None, 36)
@@ -213,6 +219,14 @@ class World:
             if nearby_house:
                 hp_regen = nearby_house.level_benefits[nearby_house.level]["hp_regen"]
                 character.hp = min(character.max_hp, character.hp + hp_regen)
+        
+        # Update attack cooldown
+        for char in self.characters:
+            char.update_attack_cooldown()
+        
+        # Check if all characters are dead
+        if all(char.is_dead for char in self.characters):
+            self.game_over = True
 
     def draw(self, screen):
         # Draw game background
@@ -250,8 +264,27 @@ class World:
             animation.update()
             animation.draw(screen)
             
+        # Draw monsters
+        for monster in self.monsters:
+            monster.draw(screen)
+            
         # Draw UI
         self.draw_ui(screen)
+        
+        # Add game over overlay
+        if self.game_over:
+            # Create dark overlay
+            overlay = pygame.Surface((self.width, self.height))
+            overlay.fill((0, 0, 0))
+            overlay.set_alpha(180)
+            screen.blit(overlay, (0, 0))
+            
+            # Draw "GAME OVER" text
+            game_over_font = pygame.font.Font(None, 96)
+            game_over_text = game_over_font.render("GAME OVER", True, (255, 0, 0))
+            text_x = self.width // 2 - game_over_text.get_width() // 2
+            text_y = self.height // 2 - game_over_text.get_height() // 2
+            screen.blit(game_over_text, (text_x, text_y))
 
     def draw_tree(self, screen, x, y):
         trunk_color = (139, 69, 19)
@@ -377,14 +410,12 @@ class World:
         instruction_surface.fill((60, 60, 80))
         screen.blit(instruction_surface, (0, 0))
         
-        instructions1 = "Controls: Move mouse to desired location, then:"
-        instructions2 = "Press 1 to plant tree | Press 2 to plant food"
+        # Single line instruction
+        instructions = "Move mouse to desired location, then press 1 to plant tree | Press 2 to plant food"
         
-        instruction_text1 = self.ui_font.render(instructions1, True, (255, 255, 255))
-        instruction_text2 = self.ui_font.render(instructions2, True, (255, 255, 255))
+        instruction_text = self.ui_font.render(instructions, True, (255, 255, 255))
         padding = 20
-        screen.blit(instruction_text1, (padding, 8))
-        screen.blit(instruction_text2, (padding, 28))
+        screen.blit(instruction_text, (padding, 18))  # Centered vertically in the instruction panel
         
         # Draw world stats panel
         stats_y = instruction_height
@@ -410,26 +441,33 @@ class World:
         
         # Draw character stats panel
         char_stats_y = stats_y + stats_height
-        char_stats_height = 80
+        char_stats_height = 100
         char_stats_surface = pygame.Surface((self.width, char_stats_height))
-        char_stats_surface.fill((45, 45, 55))
+        char_stats_surface.fill((30, 30, 30))
         screen.blit(char_stats_surface, (0, char_stats_y))
         
-        char_start_y = char_stats_y + 10
-        for idx, char in enumerate(self.characters):
-            x_pos = stats_padding + (idx * 260)
+        x_spacing = self.width // len(self.characters)
+        for i, char in enumerate(self.characters):
+            if char.is_dead:
+                continue
             
-            name_text = self.title_font.render(char.name, True, (255, 255, 0))
-            screen.blit(name_text, (x_pos, char_start_y))
+            x_pos = i * x_spacing + 20
+            y_pos = char_stats_y + 10
             
-            stats_text = [
-                f"HP: {char.hp:.0f}/{char.max_hp}",
-                f"Food: {char.inventory[Resource.FOOD]}"
+            # Character name with level
+            name_text = self.title_font.render(f"{char.name} (Lvl {char.level})", True, char.color)
+            screen.blit(name_text, (x_pos, y_pos))
+            
+            # Stats text
+            stats = [
+                f"HP: {int(char.hp)}/{char.max_hp}",
+                f"Attack: {char.attack_damage} Damage",
+                f"Exp. to level up: {char.exp_to_next_level - char.exp}"
             ]
             
-            for i, text in enumerate(stats_text):
-                text_surface = self.ui_font.render(text, True, (255, 255, 255))
-                screen.blit(text_surface, (x_pos, char_start_y + 25 + i * 20))
+            for j, stat in enumerate(stats):
+                stat_text = self.ui_font.render(stat, True, (255, 255, 255))
+                screen.blit(stat_text, (x_pos, y_pos + 25 + j * 20))
         
         # Draw speed controls in new order
         # Draw "Speed:" label
@@ -458,3 +496,85 @@ class World:
                 self.game_speed = max(1, self.game_speed - 1)
             elif self.increase_button.collidepoint(event.pos):
                 self.game_speed = min(self.max_speed, self.game_speed + 1) 
+
+    def spawn_monster(self):
+        margin = 50
+        # Spawn from edges of the screen
+        if random.choice([True, False]):
+            # Spawn from left or right
+            x = random.choice([margin, self.width - margin])
+            y = random.randint(self.game_area_start + margin, self.height - margin)
+        else:
+            # Spawn from top or bottom
+            x = random.randint(margin, self.width - margin)
+            y = random.choice([self.game_area_start + margin, self.height - margin])
+        
+        self.monsters.append(Monster(x, y))
+
+    def update_monsters(self):
+        # Update existing method
+        self.monster_spawn_timer += 1
+        if self.monster_spawn_timer >= self.monster_spawn_interval and len(self.monsters) < self.max_monsters:
+            self.spawn_monster()
+            self.monster_spawn_timer = 0
+        
+        # Update and handle monster-character interactions
+        for monster in self.monsters[:]:  # Create a copy of the list for safe removal
+            if monster.is_dead():
+                # Find characters in range to gain experience
+                exp_range = 100  # Experience sharing range
+                for char in self.characters:
+                    if not char.is_dead:
+                        dx = char.x - monster.x
+                        dy = char.y - monster.y
+                        distance = math.sqrt(dx**2 + dy**2)
+                        if distance <= exp_range:
+                            previous_level = char.level  # Store the level before gaining exp
+                            char.gain_exp(1)
+                            self.animations.append(
+                                Animation("+1 EXP", char.x, char.y, (0, 255, 255)))
+                            if char.level > previous_level:
+                                self.animations.append(
+                                    Animation(f"LEVEL UP! ({char.level})", 
+                                            char.x, char.y - 20, 
+                                            (255, 255, 0)))
+                
+                self.monsters.remove(monster)
+                self.animations.append(
+                    Animation("Monster defeated!", monster.x, monster.y, (255, 215, 0)))
+                continue
+            
+            # Find nearest character
+            nearest_char = None
+            min_distance = float('inf')
+            
+            for char in self.characters:
+                if char.is_dead:
+                    continue
+                
+                dx = char.x - monster.x
+                dy = char.y - monster.y
+                distance = math.sqrt(dx**2 + dy**2)
+                
+                # Check if character can attack monster
+                if distance <= char.attack_range:
+                    if char.attack_monster(monster):
+                        self.animations.append(
+                            Animation(f"-{char.attack_damage}", monster.x, monster.y, (255, 215, 0)))
+                
+                if distance < min_distance:
+                    min_distance = distance
+                    nearest_char = char
+            
+            if nearest_char:
+                # Move towards nearest character
+                monster.move_towards(nearest_char.x, nearest_char.y)
+                
+                # Attack if in range
+                if min_distance <= monster.attack_range and monster.can_attack():
+                    nearest_char.hp -= monster.damage
+                    monster.current_cooldown = monster.attack_cooldown
+                    self.animations.append(
+                        Animation(f"-{monster.damage} HP!", nearest_char.x, nearest_char.y, (255, 0, 0)))
+            
+            monster.update_cooldown()

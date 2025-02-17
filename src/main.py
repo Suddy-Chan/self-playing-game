@@ -136,6 +136,7 @@ def main():
                             world.perform_action(character, character.current_action)
                 
                 world.update_characters()
+                world.update_monsters()
                 frame_count += 1
             
             screen.fill((50, 100, 50))
