@@ -3,17 +3,22 @@ import math
 import pygame
 
 class Monster:
-    def __init__(self, x, y):
+    def __init__(self, x, y, game_time):
         self.x = x
         self.y = y
         self.size = 25
         self.color = (150, 0, 150)  # Purple color for monsters
-        self.speed = 2
-        self.damage = 2
+        
+        # Calculate monster level based on game time (every 1 minute level increases)
+        self.level = max(1, (game_time // (60 * 60)) + 1)
+        
+        # Base stats that scale with level
+        self.speed = 2 + (self.level * 0.2)
+        self.damage = 3 + (self.level * 2)  # Increased base damage and scaling
         self.attack_range = 30
         self.attack_cooldown = 60  # 1 second at 60 FPS
         self.current_cooldown = 0
-        self.max_hp = 10
+        self.max_hp = 10 + (self.level * 5)
         self.hp = self.max_hp
         
     def move_towards(self, target_x, target_y):
@@ -44,6 +49,11 @@ class Monster:
         eye_size = 5
         pygame.draw.circle(screen, eye_color, (int(self.x - 7), int(self.y - 5)), eye_size)
         pygame.draw.circle(screen, eye_color, (int(self.x + 7), int(self.y - 5)), eye_size)
+        
+        # Draw level text
+        font = pygame.font.Font(None, 20)
+        level_text = font.render(f"Lvl {self.level}", True, (255, 255, 255))
+        screen.blit(level_text, (self.x - level_text.get_width()//2, self.y - self.size - 25))
         
         # Draw HP bar
         hp_width = 30

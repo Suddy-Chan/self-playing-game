@@ -1,6 +1,6 @@
 # AI Village Simulation
 
-A game where AI characters learn to play themselves based on reinforcement learning. Watch as Alice, Bob, and Charlie learn to survive by gathering resources, building houses, and farming food.
+A game where AI characters learn to survive and fight monsters using reinforcement learning. Watch as Alice, Bob, and Charlie gather resources, build houses, and defend their village.
 
 ## How to Run
 
@@ -21,22 +21,40 @@ python run.py
 
 ## Game Overview
 
-In this simulation, three AI characters with different personalities interact with their environment to survive. Each character:
-- Has a health (HP) system that slowly decays over time
+In this survival simulation, three AI characters must work together to survive against increasingly difficult monsters. Each character:
+- Has health (HP) that slowly decays over time
+- Can level up by defeating monsters
+- Gains experience points (EXP) from combat
+- Has combat abilities and can attack monsters
 - Dies permanently when HP reaches 0
 - Moves faster when healthy and slower when injured
 - Can gather resources, build houses, and farm food
-- Learns from their actions through a Q-learning system
+- Learns from their actions through Q-learning
 - Has unique personality traits affecting their behavior
+
+## Combat System
+
+- Characters can attack nearby monsters
+- Monsters spawn from the edges of the map
+- Monster levels increase every minute
+- Higher level monsters have:
+  - More HP
+  - Higher damage
+  - Increased movement speed
+- Experience is shared between nearby characters
+- Characters level up to become stronger:
+  - Increased max HP
+  - Higher attack damage
+  - Full heal on level up
 
 ## Controls
 
-As a player, you can help the AI characters by adding resources to the environment:
-1. Move your mouse to the desired location in the game area
+As a player, you can help the AI characters by adding resources:
+1. Move your mouse to the desired location
 2. Press keys:
    - `1`: Plant a tree
    - `2`: Plant food
-3. Use the +/- buttons at the top to control simulation speed (1x to 5x)
+3. Use the +/- buttons to control simulation speed (1x to 5x)
 
 ## Characters
 
@@ -47,11 +65,17 @@ The simulation features three characters with distinct colors:
 
 Each character has:
 - Health Points (HP)
-- Food inventory
-- Unique personality traits affecting:
-  - Gathering efficiency
-  - Building preference
-  - Farming preference
+- Attack Damage
+- Experience and Level
+- Resource inventory
+- Unique personality traits
+
+## Game End
+
+The simulation ends when:
+- All characters are defeated by monsters
+- Final survival time is displayed
+- Game over screen shows the village's accomplishments
 
 ## Actions
 
@@ -66,7 +90,7 @@ Characters can perform various actions:
 The game interface shows:
 - Player controls and instructions
 - World resources (Trees, Food, Next resource spawn timer)
-- Character stats (Name, HP, Food inventory)
+- Character stats (Name, HP, Attack, EXP)
 - Visual feedback for actions and resource spawns
 
 ## Resource System
@@ -87,14 +111,8 @@ Characters use Q-learning to:
 ## Building System
 
 Houses can be upgraded up to level 3:
-- Level 1: Basic house (Costs 5 wood)
-  - Provides basic HP regeneration (0.05 HP/tick)
-- Level 2: Improved house (Costs 8 wood)
-  - Increased HP regeneration (0.1 HP/tick)
-  - Larger size
-- Level 3: Advanced house (Costs 15 wood)
-  - Maximum HP regeneration (0.2 HP/tick)
-  - Largest size
-  - Premium appearance
+- Level 1: Basic shelter (5 wood)
+- Level 2: Improved house (8 wood)
+- Level 3: Fortified home (15 wood)
 
 Characters will automatically upgrade nearby houses if they have enough resources.

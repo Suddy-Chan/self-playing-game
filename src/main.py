@@ -11,41 +11,42 @@ def draw_instruction_screen(screen):
     screen.blit(overlay, (0, 0))
     
     title_font = pygame.font.Font(None, 48)
-    text_font = pygame.font.Font(None, 28)
+    text_font = pygame.font.Font(None, 32)
     
-    title = title_font.render("Welcome to AI Village Simulation!", True, (255, 255, 255))
-    screen.blit(title, (400 - title.get_width()//2, 100))
+    title = title_font.render("AI Village Simulation", True, (255, 255, 255))
+    screen.blit(title, (400 - title.get_width()//2, 80))
     
     instructions = [
-        "In this simulation, three AI characters (Alice, Bob, and Charlie)",
-        "will autonomously perform various actions:",
+        "Welcome to the AI Village!",
         "",
-        "• Chop trees for wood",
-        "• Harvest and farm food to survive",
-        "• Build and upgrade houses",
+        "Characters will learn to survive while fighting monsters:",
+        "- Characters gain EXP and level up by defeating monsters",
+        "- Monsters get stronger every minute",
+        "- Game ends if all characters die",
         "",
-        "Characters will make decisions based on their needs and personality traits.",
-        "Their speed depends on their health, which decreases over time.",
+        "You can help by adding resources:",
+        "- Press 1 to plant trees",
+        "- Press 2 to plant food",
+        "- Use +/- buttons to control simulation speed (1x to 5x)",
         "",
-        "You can help by planting resources:",
-        "• Press 1 to plant a tree",
-        "• Press 2 to plant food",
-        "• Use +/- buttons at the top to control simulation speed"
+        "Watch the timer to see how long your village survives!"
     ]
     
-    y = 180
-    line_spacing = 30
+    y = 160
     for line in instructions:
         text = text_font.render(line, True, (255, 255, 255))
         screen.blit(text, (400 - text.get_width()//2, y))
-        y += line_spacing
+        y += 35
     
-    button_rect = pygame.Rect(300, 620, 200, 50)
-    pygame.draw.rect(screen, (0, 200, 0), button_rect)
-    pygame.draw.rect(screen, (0, 150, 0), button_rect, 3)
+    button_width = 200
+    button_height = 50
+    button_x = 400 - button_width//2
+    button_y = 620
+    button_rect = pygame.Rect(button_x, button_y, button_width, button_height)
+    pygame.draw.rect(screen, (0, 255, 0), button_rect)
     
-    button_text = text_font.render("Start Simulation", True, (255, 255, 255))
-    screen.blit(button_text, (400 - button_text.get_width()//2, 635))
+    start_text = text_font.render("Start Simulation", True, (0, 0, 0))
+    screen.blit(start_text, (400 - start_text.get_width()//2, button_y + 15))
     
     return button_rect
 
@@ -113,37 +114,40 @@ def main():
             world.draw(screen)
             start_button = draw_instruction_screen(screen)
         else:
-            # Process multiple frames based on game speed
-            for _ in range(world.game_speed):
-                for character in characters[:]:
-                    character.update_needs()
-                    if character.is_dead:
-                        world.animations.append(
-                            Animation(f"{character.name} has died!", character.x, character.y, (255, 0, 0)))
-                        characters.remove(character)
-                
-                world.regenerate_resources()
-                
-                if frame_count % 60 == 0:
-                    for character in characters:
-                        if character.action_state == "idle":
-                            action = character.choose_action()
-                            reward = world.perform_action(character, action)
-                            print(f"{character.name} performed {action.value}, got reward: {reward}")
-                else:
-                    for character in characters:
-                        if character.current_action:
-                            world.perform_action(character, character.current_action)
-                
-                world.update_characters()
-                world.update_monsters()
-                frame_count += 1
+            # Only process game updates if not game over
+            if not world.game_over:
+                # Process multiple frames based on game speed
+                for _ in range(world.game_speed):
+                    for character in characters[:]:
+                        character.update_needs()
+                        if character.is_dead:
+                            world.animations.append(
+                                Animation(f"{character.name} has died!", character.x, character.y, (255, 0, 0)))
+                            characters.remove(character)
+                    
+                    world.check_game_over()  # Check if game is over
+                    world.regenerate_resources()
+                    
+                    if frame_count % 60 == 0:
+                        for character in characters:
+                            if character.action_state == "idle":
+                                action = character.choose_action()
+                                reward = world.perform_action(character, action)
+                                print(f"{character.name} performed {action.value}, got reward: {reward}")
+                    else:
+                        for character in characters:
+                            if character.current_action:
+                                world.perform_action(character, character.current_action)
+                    
+                    world.update_characters()
+                    world.update_monsters()
+                    world.update_game_time()
+                    frame_count += 1
             
             screen.fill((50, 100, 50))
             world.draw(screen)
         
         pygame.display.flip()
-        # Maintain consistent base frame rate
         clock.tick(base_fps)
     
     pygame.quit()

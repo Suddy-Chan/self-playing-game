@@ -35,6 +35,7 @@ class World:
         self.monster_spawn_interval = 300  # 5 seconds at 60 FPS
         self.max_monsters = 5
         self.game_over = False
+        self.game_time = 0  # Time in frames (60 frames = 1 second)
         self.generate_resources()
         self.ui_font = pygame.font.Font(None, 24)
         self.title_font = pygame.font.Font(None, 36)
@@ -271,20 +272,27 @@ class World:
         # Draw UI
         self.draw_ui(screen)
         
-        # Add game over overlay
+        # If game is over, draw overlay and final time
         if self.game_over:
-            # Create dark overlay
+            # Semi-transparent overlay
             overlay = pygame.Surface((self.width, self.height))
             overlay.fill((0, 0, 0))
-            overlay.set_alpha(180)
+            overlay.set_alpha(128)
             screen.blit(overlay, (0, 0))
             
-            # Draw "GAME OVER" text
+            # Game Over text
             game_over_font = pygame.font.Font(None, 96)
-            game_over_text = game_over_font.render("GAME OVER", True, (255, 0, 0))
+            game_over_text = game_over_font.render("GAME OVER!", True, (255, 0, 0))
             text_x = self.width // 2 - game_over_text.get_width() // 2
-            text_y = self.height // 2 - game_over_text.get_height() // 2
+            text_y = self.height // 2 - game_over_text.get_height()
             screen.blit(game_over_text, (text_x, text_y))
+            
+            # Survival time text
+            time_font = pygame.font.Font(None, 64)
+            time_text = time_font.render(f"Survival Time: {self.format_time()}", True, (255, 255, 255))
+            time_x = self.width // 2 - time_text.get_width() // 2
+            time_y = text_y + game_over_text.get_height() + 20
+            screen.blit(time_text, (time_x, time_y))
 
     def draw_tree(self, screen, x, y):
         trunk_color = (139, 69, 19)
@@ -439,6 +447,11 @@ class World:
             # Add extra spacing before the speed text
             x_pos += 200 if i == 2 else 150
         
+        # Draw timer
+        timer_text = self.title_font.render(self.format_time(), True, (255, 255, 255))
+        timer_x = self.width - timer_text.get_width() - 20
+        screen.blit(timer_text, (timer_x, stats_text_y))
+        
         # Draw character stats panel
         char_stats_y = stats_y + stats_height
         char_stats_height = 100
@@ -446,28 +459,34 @@ class World:
         char_stats_surface.fill((30, 30, 30))
         screen.blit(char_stats_surface, (0, char_stats_y))
         
-        x_spacing = self.width // len(self.characters)
-        for i, char in enumerate(self.characters):
-            if char.is_dead:
-                continue
-            
-            x_pos = i * x_spacing + 20
-            y_pos = char_stats_y + 10
-            
-            # Character name with level
-            name_text = self.title_font.render(f"{char.name} (Lvl {char.level})", True, char.color)
-            screen.blit(name_text, (x_pos, y_pos))
-            
-            # Stats text
-            stats = [
-                f"HP: {int(char.hp)}/{char.max_hp}",
-                f"Attack: {char.attack_damage} Damage",
-                f"Exp. to level up: {char.exp_to_next_level - char.exp}"
-            ]
-            
-            for j, stat in enumerate(stats):
-                stat_text = self.ui_font.render(stat, True, (255, 255, 255))
-                screen.blit(stat_text, (x_pos, y_pos + 25 + j * 20))
+        if len(self.characters) > 0:  # Only draw character stats if there are characters alive
+            x_spacing = self.width // len(self.characters)
+            for i, char in enumerate(self.characters):
+                if char.is_dead:
+                    continue
+                
+                x_pos = i * x_spacing + 20
+                y_pos = char_stats_y + 10
+                
+                # Character name with level
+                name_text = self.title_font.render(f"{char.name} (Lvl {char.level})", True, char.color)
+                screen.blit(name_text, (x_pos, y_pos))
+                
+                # Stats text
+                stats = [
+                    f"HP: {int(char.hp)}/{char.max_hp}",
+                    f"Attack: {char.attack_damage} Damage",
+                    f"Exp. to level up: {char.exp_to_next_level - char.exp}"
+                ]
+                
+                for j, stat in enumerate(stats):
+                    stat_text = self.ui_font.render(stat, True, (255, 255, 255))
+                    screen.blit(stat_text, (x_pos, y_pos + 25 + j * 20))
+        else:  # Show only game over text in the panel
+            game_over_text = self.title_font.render("GAME OVER!", True, (255, 0, 0))
+            text_x = self.width // 2 - game_over_text.get_width() // 2
+            text_y = char_stats_y + (char_stats_height // 2) - game_over_text.get_height() // 2
+            screen.blit(game_over_text, (text_x, text_y))
         
         # Draw speed controls in new order
         # Draw "Speed:" label
@@ -509,7 +528,7 @@ class World:
             x = random.randint(margin, self.width - margin)
             y = random.choice([self.game_area_start + margin, self.height - margin])
         
-        self.monsters.append(Monster(x, y))
+        self.monsters.append(Monster(x, y, self.game_time))
 
     def update_monsters(self):
         # Update existing method
@@ -578,3 +597,18 @@ class World:
                         Animation(f"-{monster.damage} HP!", nearest_char.x, nearest_char.y, (255, 0, 0)))
             
             monster.update_cooldown()
+
+    def update_game_time(self):
+        self.game_time += 1
+
+    def format_time(self):
+        total_seconds = self.game_time // 60
+        minutes = total_seconds // 60
+        seconds = total_seconds % 60
+        return f"{minutes:02d}:{seconds:02d}"
+
+    def check_game_over(self):
+        if len(self.characters) == 0:
+            self.game_over = True
+            return True
+        return False
