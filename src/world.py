@@ -36,6 +36,7 @@ class World:
         self.max_monsters = 5
         self.game_over = False
         self.game_time = 0  # Time in frames (60 frames = 1 second)
+        self.paused = False
         self.generate_resources()
         self.ui_font = pygame.font.Font(None, 24)
         self.title_font = pygame.font.Font(None, 36)
@@ -47,6 +48,10 @@ class World:
         self.decrease_button = pygame.Rect(560, button_y, button_width, button_height)
         self.speed_value_pos = (590, button_y)
         self.increase_button = pygame.Rect(630, button_y, button_width, button_height)
+        self.show_help = False
+        self.help_button = pygame.Rect(self.width - 70, 10, 60, 30)  # x, y, width, height
+        self.help_page = 1
+        self.total_help_pages = 3
 
     def add_character(self, character):
         self.characters.append(character)
@@ -271,6 +276,12 @@ class World:
             
         # Draw UI
         self.draw_ui(screen)
+        
+        # Draw help button
+        self.draw_help_button(screen)
+        
+        if self.show_help:
+            self.draw_help_overlay(screen)
         
         # If game is over, draw overlay and final time
         if self.game_over:
@@ -612,3 +623,90 @@ class World:
             self.game_over = True
             return True
         return False
+
+    def draw_help_button(self, screen):
+        # Draw help button
+        pygame.draw.rect(screen, (0, 153, 255), self.help_button)
+        help_text = self.ui_font.render("Help", True, (255, 255, 255))
+        text_x = self.help_button.centerx - help_text.get_width() // 2
+        text_y = self.help_button.centery - help_text.get_height() // 2
+        screen.blit(help_text, (text_x, text_y))
+
+    def draw_help_overlay(self, screen):
+        if not self.show_help:
+            return
+        
+        # Semi-transparent overlay
+        overlay = pygame.Surface((self.width, self.height))
+        overlay.fill((0, 0, 0))
+        overlay.set_alpha(180)
+        screen.blit(overlay, (0, 0))
+        
+        # Define help box dimensions
+        box_width = 400
+        box_height = 400
+        box_x = self.width//2 - box_width//2
+        box_y = 80
+        
+        # Draw help box background
+        pygame.draw.rect(screen, (40, 40, 40), (box_x, box_y, box_width, box_height))
+        # Draw box border
+        pygame.draw.rect(screen, (100, 100, 100), (box_x, box_y, box_width, box_height), 2)
+        
+        # Help content
+        help_title = self.title_font.render(f"Help (Page {self.help_page}/{self.total_help_pages})", True, (255, 255, 255))
+        screen.blit(help_title, (self.width//2 - help_title.get_width()//2, box_y + 20))
+        
+        # Different instructions based on page
+        if self.help_page == 1:
+            instructions = [
+                "Basic Controls",
+                "- 1: Plant trees",
+                "- 2: Plant food",
+                "- +/-: Game speed",
+                ""
+            ]
+        elif self.help_page == 2:
+            instructions = [
+                "Combat System",
+                "- Auto-attack nearby monsters",
+                "- Gain EXP from kills",
+                "- Share EXP in range",
+                "",
+                "Monsters",
+                "- Spawn from edges",
+                "- Get stronger over time"
+            ]
+        else:  # page 3
+            instructions = [
+                "Resources",
+                "- Trees -> Wood",
+                "- Food -> Health",
+                "- Auto-regenerate",
+                "",
+                "Buildings",
+                "- Houses: 5 wood",
+                "- Heal nearby characters"
+            ]
+        
+        y = box_y + 80  # Start text below title
+        for line in instructions:
+            text = self.ui_font.render(line, True, (255, 255, 255))
+            screen.blit(text, (self.width//2 - text.get_width()//2, y))
+            y += 30
+
+        # Add arrow key indicators
+        if self.help_page > 1:
+            left_arrow = "<- Previous"
+        else:
+            left_arrow = "         "
+            
+        if self.help_page < self.total_help_pages:
+            right_arrow = "Next ->"
+        else:
+            right_arrow = "      "
+        
+        # Draw navigation hints with fixed spacing
+        spacing = " " * 20  # Create consistent space between arrows
+        nav_text = self.ui_font.render(f"{left_arrow}{spacing}{right_arrow}", True, (200, 200, 200))
+        screen.blit(nav_text, (self.width//2 - nav_text.get_width()//2, box_y + box_height - 50))

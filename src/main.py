@@ -85,9 +85,19 @@ def main():
             if event.type == pygame.QUIT:
                 running = False
             elif event.type == pygame.MOUSEBUTTONDOWN:
-                if show_instructions:
+                mouse_pos = pygame.mouse.get_pos()
+                
+                if world.help_button.collidepoint(mouse_pos):
+                    # Toggle help overlay and pause state
+                    world.show_help = not world.show_help
+                    world.paused = world.show_help
+                    world.help_page = 1  # Reset to first page when opening
+                elif world.show_help:
+                    # Click anywhere to close help and unpause
+                    world.show_help = False
+                    world.paused = False
+                elif show_instructions:
                     # Check if start button is clicked
-                    mouse_pos = pygame.mouse.get_pos()
                     if start_button.collidepoint(mouse_pos):
                         show_instructions = False
                 else:
@@ -95,27 +105,33 @@ def main():
             elif event.type in (pygame.MOUSEBUTTONUP, pygame.MOUSEMOTION):
                 if not show_instructions:
                     world.handle_mouse_event(event)
-            elif not show_instructions and event.type == pygame.KEYDOWN:
-                mouse_x, mouse_y = pygame.mouse.get_pos()
-                if mouse_y > world.game_area_start:
-                    if event.key == pygame.K_1:
-                        world.tree_positions.append((mouse_x, mouse_y))
-                        world.resources[Resource.WOOD] += 1
-                        world.animations.append(
-                            Animation("Tree Planted!", mouse_x, mouse_y, (0, 255, 0)))
-                    elif event.key == pygame.K_2:
-                        world.food_positions.append((mouse_x, mouse_y))
-                        world.resources[Resource.FOOD] += 1
-                        world.animations.append(
-                            Animation("Food Planted!", mouse_x, mouse_y, (255, 255, 0)))
+            elif event.type == pygame.KEYDOWN:
+                if world.show_help:
+                    if event.key == pygame.K_LEFT:
+                        world.help_page = max(1, world.help_page - 1)
+                    elif event.key == pygame.K_RIGHT:
+                        world.help_page = min(world.total_help_pages, world.help_page + 1)
+                elif not show_instructions:
+                    mouse_x, mouse_y = pygame.mouse.get_pos()
+                    if mouse_y > world.game_area_start:
+                        if event.key == pygame.K_1:
+                            world.tree_positions.append((mouse_x, mouse_y))
+                            world.resources[Resource.WOOD] += 1
+                            world.animations.append(
+                                Animation("Tree Planted!", mouse_x, mouse_y, (0, 255, 0)))
+                        elif event.key == pygame.K_2:
+                            world.food_positions.append((mouse_x, mouse_y))
+                            world.resources[Resource.FOOD] += 1
+                            world.animations.append(
+                                Animation("Food Planted!", mouse_x, mouse_y, (255, 255, 0)))
         
         if show_instructions:
             screen.fill((50, 100, 50))
             world.draw(screen)
             start_button = draw_instruction_screen(screen)
         else:
-            # Only process game updates if not game over
-            if not world.game_over:
+            # Only process game updates if not game over and not paused
+            if not world.game_over and not world.paused:
                 # Process multiple frames based on game speed
                 for _ in range(world.game_speed):
                     for character in characters[:]:
