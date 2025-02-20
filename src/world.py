@@ -660,41 +660,42 @@ class World:
         # Different instructions based on page
         if self.help_page == 1:
             instructions = [
-                "Basic Controls",
-                "- 1: Plant trees",
-                "- 2: Plant food",
-                "- +/-: Game speed",
-                ""
+                ("Basic Controls", True),  # True indicates it's a heading
+                ("1: Plant trees", False),
+                ("2: Plant food", False),
+                ("+/-: Game speed", False),
+                ("", False)
             ]
         elif self.help_page == 2:
             instructions = [
-                "Combat System",
-                "- Auto-attack nearby monsters",
-                "- Gain EXP from kills",
-                "- Share EXP in range",
-                "",
-                "Monsters",
-                "- Spawn from edges",
-                "- Get stronger over time"
+                ("Combat System", True),
+                ("Auto-attack nearby monsters", False),
+                ("Gain EXP from kills", False),
+                ("Share EXP in range", False),
+                ("", False),
+                ("Monsters", True),
+                ("Spawn from edges", False),
+                ("Get stronger over time", False)
             ]
         else:  # page 3
             instructions = [
-                "Resources",
-                "- Trees -> Wood",
-                "- Food -> Health",
-                "- Auto-regenerate",
-                "",
-                "Buildings",
-                "- Houses: 5 wood",
-                "- Heal nearby characters"
+                ("Resources", True),
+                ("Trees -> Wood", False),
+                ("Food -> Health", False),
+                ("Auto-regenerate", False),
+                ("", False),
+                ("Buildings", True),
+                ("Houses: 5 wood", False),
+                ("Heal nearby characters", False)
             ]
         
         y = box_y + 80  # Start text below title
-        for line in instructions:
-            text = self.ui_font.render(line, True, (255, 255, 255))
+        for line, is_heading in instructions:
+            font = self.title_font if is_heading else self.ui_font
+            text = font.render(line, True, (255, 255, 255))
             screen.blit(text, (self.width//2 - text.get_width()//2, y))
-            y += 30
-
+            y += 35 if is_heading else 30
+        
         # Add arrow key indicators
         if self.help_page > 1:
             left_arrow = "<- Previous"

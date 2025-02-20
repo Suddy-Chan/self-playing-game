@@ -11,10 +11,20 @@ def draw_instruction_screen(screen):
     screen.blit(overlay, (0, 0))
     
     title_font = pygame.font.Font(None, 48)
-    text_font = pygame.font.Font(None, 32)
+    text_font = pygame.font.Font(None, 28)
+    
+    # Define instruction box dimensions
+    box_width = 600
+    box_height = 520
+    box_x = 400 - box_width//2
+    box_y = 60
+    
+    # Draw instruction box background and border
+    pygame.draw.rect(screen, (40, 40, 40), (box_x, box_y, box_width, box_height))
+    pygame.draw.rect(screen, (100, 100, 100), (box_x, box_y, box_width, box_height), 2)
     
     title = title_font.render("AI Village Simulation", True, (255, 255, 255))
-    screen.blit(title, (400 - title.get_width()//2, 80))
+    screen.blit(title, (400 - title.get_width()//2, box_y + 40))  # Moved title down
     
     instructions = [
         "Welcome to the AI Village!",
@@ -32,18 +42,22 @@ def draw_instruction_screen(screen):
         "Watch the timer to see how long your village survives!"
     ]
     
-    y = 160
+    y = box_y + 120  # Moved instruction text starting position down
     for line in instructions:
         text = text_font.render(line, True, (255, 255, 255))
         screen.blit(text, (400 - text.get_width()//2, y))
-        y += 35
+        y += 30
     
     button_width = 200
     button_height = 50
     button_x = 400 - button_width//2
     button_y = 620
     button_rect = pygame.Rect(button_x, button_y, button_width, button_height)
+    
+    # Draw button background
     pygame.draw.rect(screen, (0, 255, 0), button_rect)
+    # Draw button border (2 pixels wide, dark green color)
+    pygame.draw.rect(screen, (0, 100, 0), button_rect, 2)
     
     start_text = text_font.render("Start Simulation", True, (0, 0, 0))
     screen.blit(start_text, (400 - start_text.get_width()//2, button_y + 15))
