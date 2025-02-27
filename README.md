@@ -2,6 +2,8 @@
 
 A game where AI characters learn to survive and fight monsters using reinforcement learning. Watch as Alice, Bob, and Charlie gather resources, build houses, and defend their village.
 
+![Gameplay Screenshot](screenshots/gameplay.png)
+
 ## How to Run
 
 1. Make sure you have Python 3.x installed on your system
@@ -19,6 +21,12 @@ pip install pygame
 python run.py
 ```
 
+## Game Instructions
+
+When you first start the game, you'll see the instructions screen explaining how to play:
+
+![Instructions Screen](screenshots/instructions.png)
+
 ## Game Overview
 
 In this survival simulation, three AI characters must work together to survive against increasingly difficult monsters. Each character:
@@ -33,6 +41,7 @@ In this survival simulation, three AI characters must work together to survive a
 - Has unique personality traits affecting their behavior
 
 ## Combat System
+![Combat Screenshot](screenshots/combat.png)
 
 - Characters can attack nearby monsters
 - Monsters spawn from the edges of the map
@@ -55,6 +64,7 @@ As a player, you can help the AI characters by adding resources:
    - `1`: Plant a tree
    - `2`: Plant food
 3. Use the +/- buttons to control simulation speed (1x to 5x)
+4. Press F12 to take a screenshot of the game
 
 ## Characters
 
@@ -71,6 +81,7 @@ Each character has:
 - Unique personality traits
 
 ## Game End
+![Game Over Screenshot](screenshots/gameover.png)
 
 The simulation ends when:
 - All characters are defeated by monsters
@@ -109,6 +120,7 @@ Characters use Q-learning to:
 - Consider their personality traits when making decisions
 
 ## Building System
+![Building Screenshot](screenshots/building.png)
 
 Houses can be upgraded up to level 3:
 - Level 1: Basic shelter (5 wood)

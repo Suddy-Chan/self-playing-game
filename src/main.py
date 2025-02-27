@@ -1,8 +1,22 @@
 import pygame
-from .world import World
-from .character import Character
-from .enums import Resource
-from .animation import Animation
+from src.world import World
+from src.character import Character
+from src.enums import Resource
+from src.animation import Animation
+
+# Define the take_screenshot function directly in main.py instead of importing it
+def take_screenshot(screen):
+    import datetime
+    import os
+    
+    # Create screenshots directory if it doesn't exist
+    if not os.path.exists("screenshots"):
+        os.makedirs("screenshots")
+        
+    timestamp = datetime.datetime.now().strftime("%Y%m%d-%H%M%S")
+    filename = f"screenshots/screenshot-{timestamp}.png"
+    pygame.image.save(screen, filename)
+    print(f"Screenshot saved as {filename}")
 
 def draw_instruction_screen(screen):
     overlay = pygame.Surface((800, 700))
@@ -125,6 +139,8 @@ def main():
                         world.help_page = max(1, world.help_page - 1)
                     elif event.key == pygame.K_RIGHT:
                         world.help_page = min(world.total_help_pages, world.help_page + 1)
+                elif event.key == pygame.K_F12:  # F12 key for screenshot
+                    take_screenshot(screen)
                 elif not show_instructions:
                     mouse_x, mouse_y = pygame.mouse.get_pos()
                     if mouse_y > world.game_area_start:

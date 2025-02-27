@@ -1,10 +1,23 @@
 import random
 import math
 import pygame
+import datetime
+import os
 from .enums import Resource, Action
 from .animation import Animation
 from .buildings import House
 from .monster import Monster
+
+# Define take_screenshot as a standalone function at the module level
+def take_screenshot(screen):
+    # Create screenshots directory if it doesn't exist
+    if not os.path.exists("screenshots"):
+        os.makedirs("screenshots")
+        
+    timestamp = datetime.datetime.now().strftime("%Y%m%d-%H%M%S")
+    filename = f"screenshots/screenshot-{timestamp}.png"
+    pygame.image.save(screen, filename)
+    print(f"Screenshot saved as {filename}")
 
 class World:
     def __init__(self):
